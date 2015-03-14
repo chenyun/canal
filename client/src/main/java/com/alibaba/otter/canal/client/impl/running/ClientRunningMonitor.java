@@ -27,6 +27,21 @@ import com.alibaba.otter.canal.common.zookeeper.ZookeeperPathUtils;
  * @author jianghang 2012-11-22 下午03:43:01
  * @version 1.0.0
  */
+
+/*
+ * note by cy
+ * Brief:
+ *   ClientRunningMonitor是ClusterNodeAccessStrategy下采用的启动管理类，会通过调用SimpleCanalConnect的setZkClientx间接调用
+ *   initClientRunningMonitor, 从而创建ClientRunningMonitor, 其中变量之一
+ *   ClientRunningData封装了clientIdentity.getClientID, 以及AddressUtils.getHostIp, 而变量之二
+ *   ClientRunningListener封装了两个接口，分别在processActiveEnter和processActiveExit时候调用，主要是调用
+ *   SimpleCanalConnector的doConnect和doDisconnect, 进一步利用了
+ *   mutex.set(true|false)作为ClusterNodeAccessStrategy下的特征， doConnect还返回InetSocketAddress
+ * 
+ * 疑问:
+ *   (1)mutex.set(true|false)的含义
+ */
+
 public class ClientRunningMonitor extends AbstractCanalLifeCycle {
 
     private static final Logger        logger       = LoggerFactory.getLogger(ClientRunningMonitor.class);
