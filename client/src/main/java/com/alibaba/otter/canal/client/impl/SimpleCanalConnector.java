@@ -45,6 +45,96 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * @author jianghang 2012-10-24 下午05:37:20
  * @version 1.0.0
  */
+
+/*
+ * note by cy
+ * API:
+ *   <1>connect: 
+ *     ***不应该如此实现接口, 同一个方法有两种逻辑分支，应该拆成两个方法。或者更高层的拆分。
+ *     普通模式下先调用waitClientRunning, 再调用doConnect, 并处理filter和rollbackOnConnect
+ *       doConnect(): try{} catch(IOException e)
+ *          先channel open, 设置soTimeout, 链接到address
+      		再p = Packet.parseFrom(readNextPacket(channel)), 校验p的version为1， p的type必须为handshake,从p中获取
+            handshake, 从handshake中获取
+            supportedCompressions, 并保存
+            ca = ClientAuth.newBuilder().setUsername|NetReadTimeout|NetWriteTimeout, 并调用
+            writeWithHeader(channel, Packet.newBuilder().setType|Body(ca.toByteString()).build().toByteArray())
+            ack = Packet.parseFrom(readNextPacket(channel)), 并验证ack type以及没有error code
+            设置connected为true, 并返回
+            InetSocketAddress(channel.getSocket().getLocalAddress, channel.getSocket().getLocalPort), 这个返回值被initRunningMonitor使用
+ *     而采用了ClusterNoteAccessStrategy时，直接调用runningMonitor.start()，会触发ClientRunningListener，并调用doConnect
+ *        runningMonitor是在调用setZkClientx的时候初始化的, initRunningMonitor
+ *     设置connected为true
+ *     
+ *   <2>disconnect:
+ *     ***BAD implementation
+ *     先处理rollbackOnDisconnect
+ *     设置connected为false
+ *     普通模式直接调用doDisconnect
+ *        channel.close() && channel = null
+ *     Cluster模式调用runningMonitor.stop()
+ *     
+ *   <3>subscribe(filter):
+ *   
+       * waitClientRunning, 再try {} catch(IOException e), 其中先
+       * writeWithHeader(channel, BuilderSubscriptionPacketwithBody(destination, clientId)), 再接受
+       * ack by Ack.parseFrom(Packet.parseFrom(readNextPacket(channel)).getBody())
+       * 并且设置clientIdentity.setFilter(filter)
+ * 
+ *    <4>unsubscribe:
+ *       waitClientRunning之后先writeWithHeader一个UnSubscriptionPacket, 并readAck
+ *    <5>Message get(int batchSize, Long timeout, TimeUnit unit)
+ *       getWithoutAck(int batchSize, Long timeout, TimeUnit unit)
+ *       ack(message.getId)
+ *    <6>Message getWithoutAck(int batchSize, Long timeout, TimeUnit unit)
+ *       waitClientRunning, 再
+ *       writeWithHeader(channel, BuildGetPacket), 再
+ *       receiveMessages
+ *         p = Packet.parseFrom(readNextPacket(channel))
+ *         switch p.type
+ *         case Messages
+ *           messages = Messages.parseFrom(p.body)
+ *           buildMessageFromMessages(this should inside the Protocol)
+ *         case ACK
+ *    <7>ack
+ *       waitClientRunning, 再
+ *       writeWithHeader(channel, BuildClientAckPacket)
+ *    <8>rollback
+ *       waitClientRunning, 再
+ *       writeWithHeader(channel, BuildClientRollbackPacket)
+ *    <9>writeWithHeader
+ *       synchronized (writeDataLock) {
+            writeHeader.clear();writeHeader.putInt(body.length);writeHeader.flip();
+            channel.write(writeHeader);channel.write(ByteBuffer.wrap(body));
+         }
+ *    <10>readNextPacket
+ *    	 synchronized (readDataLock) {
+ *          readHeader.clear(); read(channel, readerHeader);
+ *          read(channel, ByteBuffer.allocate(bodyLen).order(ByteOrder.BIG_ENDIAN))
+ *       }
+ *    <11>read
+ *    <12>initClientRunningMonitor
+ *    <13>waitClientRunning
+ * 
+ * DataS: 
+ *    <logger: LoggerFactory.getLogger(SimpleCanalConnector.class)>
+ *    <SocketAddress address, String username, password, new ClientIdentity(String destination, int soTimeout)>
+ *    
+ * 
+ * 疑问:
+ *   (1)在SimpleCanalConnector中，zkClientx的意义何在?(checkValid, initClientRunningMonitor(ClientIdentity), watClientRunning中使用)
+ *      答: ClusterCannalConntor的currentConnector本质上是一个SimpleCanalConnector, 只不过具有zkClientx和ClientRunningMonitor
+ *   (2)volatile关键字的含义
+ *   (3)synchronized关键字的含义
+ *   (4)rollbackOnConnect与rollbackOnDisconnect的意义
+ *   
+ * Brief:
+ *    ClusterCanalConnector是基于SimpleCanalConnector的，会在其connect方法中调用setZkClientx(ZkClientx), 而setZkClientx会调用
+ *    initClientRunningMonitor
+ *    产生一个channel: new SocketChannel
+ *    Packet其实就是类型加body。Subscribe, Unsubscribe等
+ * 
+ */
 public class SimpleCanalConnector implements CanalConnector {
 
     private static final Logger  logger                = LoggerFactory.getLogger(SimpleCanalConnector.class);
@@ -121,6 +211,7 @@ public class SimpleCanalConnector implements CanalConnector {
         }
     }
 
+    
     private InetSocketAddress doConnect() throws CanalClientException {
         try {
             channel = SocketChannel.open();
@@ -182,6 +273,7 @@ public class SimpleCanalConnector implements CanalConnector {
     public void subscribe() throws CanalClientException {
         subscribe(""); // 传递空字符即可
     }
+
 
     public void subscribe(String filter) throws CanalClientException {
         waitClientRunning();
