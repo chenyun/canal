@@ -12,6 +12,33 @@ import com.alibaba.otter.canal.protocol.exception.CanalClientException;
  * @author jianghang
  * @version 1.0.0
  */
+/*
+ * note by cy
+ * Implemented by:
+ *    SimpleCanalConnector, ClusterCanalConnecter
+ * 
+ * API:
+ *    connect()
+ *    disconnect()
+ *    boolean checkValid()
+ *    subscribe(String filter)
+ *    unsubscribe()
+ *    Message get(int batchSize) 自动ACK, 不阻塞等待
+ *    Message get(int batchSize, Long timeout, TimeUnit unit) 自动ACK, 阻塞等待，直到获取batchSize 或者 timeout
+ *    Message getWithoutAck(int batchSize) 不指定position, 不阻塞等待
+ *    Message getWithoutAck(int batchSize, Long timeout, TimeUnit unit) 不指定position, 阻塞等待，直到获取batchSize 或者 timeout
+ *    ack(Long batchId) 确认小于等于此batchID的Message
+ *    rollback(Long batchId)
+ *    
+ * DataS: 
+ *    Message(Long batchId)
+ *    int batchSize   
+ * 
+ * 疑问:  
+ *    阅读SimpleCanalConnector时，解答以下问题:
+ *    (1)自动ACK vs 不指定position ?
+ *    (2)TimeUnit unit的作用
+ */  
 public interface CanalConnector {
 
     /**
