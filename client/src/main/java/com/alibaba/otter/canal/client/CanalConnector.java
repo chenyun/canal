@@ -37,6 +37,7 @@ import com.alibaba.otter.canal.protocol.exception.CanalClientException;
  * 疑问:  
  *    阅读SimpleCanalConnector时，解答以下问题:
  *    (1)自动ACK vs 不指定position ?
+ *       position似乎跟ACK无关，只是ack会回传Message.getId();
  *    (2)TimeUnit unit的作用
  */  
 public interface CanalConnector {

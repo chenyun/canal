@@ -144,6 +144,7 @@ public class SimpleCanalConnector implements CanalConnector {
     private int                  soTimeout             = 60000;                                              // milliseconds
     private String               filter;                                                                     // 记录上一次的filter提交值,便于自动重试时提交
 
+    //BAD allocate(4) belongs to protocol.
     private final ByteBuffer     readHeader            = ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN);
     private final ByteBuffer     writeHeader           = ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN);
     private SocketChannel        channel;
