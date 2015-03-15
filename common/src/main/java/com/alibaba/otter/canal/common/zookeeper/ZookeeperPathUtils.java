@@ -29,6 +29,15 @@ import org.apache.commons.lang.StringUtils;
  * @author zebin.xuzb @ 2012-6-21
  * @version 1.0.0
  */
+
+/*
+ * note by cy
+ * BAD: 用字符串拼接生产常量, 可理解性非常差
+ * 
+ * Memo: 
+ *   nodes: filter, batch mark, parse, cursor, running, cluster  (这么多node分别起什么作用？)
+ */
+
 public class ZookeeperPathUtils {
 
     public static final String ZOOKEEPER_SEPARATOR                          = "/";

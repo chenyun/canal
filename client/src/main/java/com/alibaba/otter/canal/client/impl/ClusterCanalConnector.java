@@ -18,6 +18,34 @@ import com.alibaba.otter.canal.protocol.exception.CanalClientException;
  * @author jianghang 2012-10-29 下午08:04:06
  * @version 1.0.0
  */
+
+/*
+ * note by cy 
+ * Brief: 
+ *   被CanalConnectors使用，newClusterConnector, 支持直接ip地址列表和zookeeper形式, 分别对应
+ *   SimpleNodeAccessStrategy, 和
+ *   ClusterNodeAccessStrategy
+ *   Server可以想象成一个能记住client状态的集群，不管客户端处于何种状态，任意一个操作都可以重连至任意节点继续进行。(服务端如何实现这一点？)
+ *   SimpleNodeAccessStrategy简单的从一列节点地址中选取一个作为当前接点，并尝试连接，失败后连接下一个节点。
+ *   ClusterNodeAccessStrategy
+ *   
+ * API:
+ *  (1) connect
+     * nextAddress是从accessStrategy.nextNode中获取，再以此为address, 调用
+     * new SimpleCanalConnector, 并用try catch(Exception e)的方式来(因为底层库java.nio.channels.SocketChannel是抛出异常的)
+     * times = times + 1和currentConnector = null，并控制retry次数和retry interval,
+     * BAD: 另外，还在connect之前为ClusterNodeAccess方式额外调用了setZkClientx(accessStrategy.getZkClient())
+    (2) subscribe
+      while(times <= retryTimes) { try { currentConnector.subscribe(filter) } catch { times ++; restart(); } }
+    (3) ubsubscribe
+      同上
+    (4) get, getWithoutAck, rollback, ack, 均同上
+ *   
+ * 疑问:
+ *  （1）什么是zookeeper
+ * 
+ */
+
 public class ClusterCanalConnector implements CanalConnector {
 
     private final Logger            logger        = LoggerFactory.getLogger(this.getClass());
