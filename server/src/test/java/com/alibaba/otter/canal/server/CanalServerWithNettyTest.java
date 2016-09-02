@@ -58,7 +58,8 @@ public class CanalServerWithNettyTest {
             }
         });
 
-        nettyServer = new CanalServerWithNetty(embeddedServer);
+        nettyServer = CanalServerWithNetty.instance();
+        nettyServer.setEmbeddedServer(embeddedServer);
         nettyServer.setPort(1088);
         nettyServer.start();
     }

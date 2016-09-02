@@ -88,9 +88,9 @@ public class CanalController {
         cid = Long.valueOf(getProperty(properties, CanalConstants.CANAL_ID));
         ip = getProperty(properties, CanalConstants.CANAL_IP);
         port = Integer.valueOf(getProperty(properties, CanalConstants.CANAL_PORT));
-        embededCanalServer = new CanalServerWithEmbedded();
+        embededCanalServer = CanalServerWithEmbedded.instance();
         embededCanalServer.setCanalInstanceGenerator(instanceGenerator);// 设置自定义的instanceGenerator
-        canalServer = new CanalServerWithNetty(embededCanalServer);
+        canalServer = CanalServerWithNetty.instance();
         canalServer.setIp(ip);
         canalServer.setPort(port);
 
@@ -231,7 +231,13 @@ public class CanalController {
                         if (StringUtils.isEmpty(rootDir)) {
                             rootDir = "../conf";
                         }
-                        monitor.setRootConf(rootDir);
+
+                        if (StringUtils.equals("otter-canal", System.getProperty("appName"))) {
+                            monitor.setRootConf(rootDir);
+                        } else {
+                            // eclipse debug模式
+                            monitor.setRootConf("src/main/resources/");
+                        }
                         return monitor;
                     } else if (mode.isManager()) {
                         return new ManagerInstanceConfigMonitor();

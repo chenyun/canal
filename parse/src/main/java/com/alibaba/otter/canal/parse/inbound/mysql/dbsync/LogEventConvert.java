@@ -84,6 +84,8 @@ public class LogEventConvert extends AbstractCanalLifeCycle implements BinlogPar
     private boolean                     filterQueryDdl      = false;
     // 是否跳过table相关的解析异常,比如表不存在或者列数量不匹配,issue 92
     private boolean                     filterTableError    = false;
+    // 新增rows过滤，用于仅订阅除rows以外的数据
+    private boolean                     filterRows      = false;
 
     public Entry parse(LogEvent logEvent) throws CanalParseException {
         if (logEvent == null || logEvent instanceof UnknownLogEvent) {
@@ -305,6 +307,9 @@ public class LogEventConvert extends AbstractCanalLifeCycle implements BinlogPar
     }
 
     private Entry parseRowsEvent(RowsLogEvent event) {
+        if (filterRows) {
+            return null;
+        }
         try {
             TableMapLogEvent table = event.getTable();
             if (table == null) {
@@ -345,7 +350,7 @@ public class LogEventConvert extends AbstractCanalLifeCycle implements BinlogPar
             rowChangeBuider.setEventType(eventType);
             RowsLogBuffer buffer = event.getRowsBuf(charset.name());
             BitSet columns = event.getColumns();
-            BitSet changeColumns = event.getColumns();
+            BitSet changeColumns = event.getChangeColumns();
             boolean tableError = false;
             TableMeta tableMeta = null;
             if (tableMetaCache != null) {// 入错存在table meta cache
@@ -375,7 +380,7 @@ public class LogEventConvert extends AbstractCanalLifeCycle implements BinlogPar
                         break;
                     }
 
-                    tableError |= parseOneRow(rowDataBuilder, event, buffer, event.getChangeColumns(), true, tableMeta);
+                    tableError |= parseOneRow(rowDataBuilder, event, buffer, changeColumns, true, tableMeta);
                 }
 
                 rowChangeBuider.addRowDatas(rowDataBuilder.build());
@@ -623,8 +628,9 @@ public class LogEventConvert extends AbstractCanalLifeCycle implements BinlogPar
                 if (column.getIsNull() && newValue == null) {
                     // 如果全是null
                     return false;
-                } else if (newValue != null && column.getValue().equals(newValue)) {
-                    // 如果不围null，并且相等
+                } else if (newValue != null && (!column.getIsNull() && column.getValue().equals(newValue))) {
+                    // fixed issue #135, old column is Null
+                    // 如果不为null，并且相等
                     return false;
                 }
             }
@@ -711,6 +717,10 @@ public class LogEventConvert extends AbstractCanalLifeCycle implements BinlogPar
 
     public void setFilterTableError(boolean filterTableError) {
         this.filterTableError = filterTableError;
+    }
+    
+    public void setFilterRows(boolean filterRows) {
+        this.filterRows = filterRows;
     }
 
 }

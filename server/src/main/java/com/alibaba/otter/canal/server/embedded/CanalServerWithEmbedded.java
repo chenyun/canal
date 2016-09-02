@@ -21,6 +21,7 @@ import com.alibaba.otter.canal.protocol.position.LogPosition;
 import com.alibaba.otter.canal.protocol.position.Position;
 import com.alibaba.otter.canal.protocol.position.PositionRange;
 import com.alibaba.otter.canal.server.CanalServer;
+import com.alibaba.otter.canal.server.CanalService;
 import com.alibaba.otter.canal.server.exception.CanalServerException;
 import com.alibaba.otter.canal.store.CanalEventStore;
 import com.alibaba.otter.canal.store.model.Event;
@@ -37,24 +38,39 @@ import com.google.common.collect.MigrateMap;
  * @author zebin.xuzb
  * @version 1.0.0
  */
-public class CanalServerWithEmbedded extends AbstractCanalLifeCycle implements CanalServer, com.alibaba.otter.canal.server.CanalService {
+public class CanalServerWithEmbedded extends AbstractCanalLifeCycle implements CanalServer, CanalService {
 
     private static final Logger        logger = LoggerFactory.getLogger(CanalServerWithEmbedded.class);
     private Map<String, CanalInstance> canalInstances;
     // private Map<ClientIdentity, Position> lastRollbackPostions;
     private CanalInstanceGenerator     canalInstanceGenerator;
 
+    private static class SingletonHolder {
+
+        private static final CanalServerWithEmbedded CANAL_SERVER_WITH_EMBEDDED = new CanalServerWithEmbedded();
+    }
+
+    public CanalServerWithEmbedded(){
+        // 希望也保留用户new单独实例的需求,兼容历史
+    }
+
+    public static CanalServerWithEmbedded instance() {
+        return SingletonHolder.CANAL_SERVER_WITH_EMBEDDED;
+    }
+
     public void start() {
-        super.start();
+        if (!isStart()) {
+            super.start();
 
-        canalInstances = MigrateMap.makeComputingMap(new Function<String, CanalInstance>() {
+            canalInstances = MigrateMap.makeComputingMap(new Function<String, CanalInstance>() {
 
-            public CanalInstance apply(String destination) {
-                return canalInstanceGenerator.generate(destination);
-            }
-        });
+                public CanalInstance apply(String destination) {
+                    return canalInstanceGenerator.generate(destination);
+                }
+            });
 
-        // lastRollbackPostions = new MapMaker().makeMap();
+            // lastRollbackPostions = new MapMaker().makeMap();
+        }
     }
 
     public void stop() {

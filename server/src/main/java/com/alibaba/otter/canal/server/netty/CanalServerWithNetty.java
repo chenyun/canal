@@ -33,11 +33,17 @@ public class CanalServerWithNetty extends AbstractCanalLifeCycle implements Cana
     private Channel                 serverChannel = null;
     private ServerBootstrap         bootstrap     = null;
 
-    public CanalServerWithNetty(){
+    private static class SingletonHolder {
+
+        private static final CanalServerWithNetty CANAL_SERVER_WITH_NETTY = new CanalServerWithNetty();
     }
 
-    public CanalServerWithNetty(CanalServerWithEmbedded embeddedServer){
-        this.embeddedServer = embeddedServer;
+    private CanalServerWithNetty(){
+        this.embeddedServer = CanalServerWithEmbedded.instance();
+    }
+
+    public static CanalServerWithNetty instance() {
+        return SingletonHolder.CANAL_SERVER_WITH_NETTY;
     }
 
     public void start() {
